@@ -1,0 +1,22 @@
+<S> = full_title / no_kind / title_only
+
+<full_title> = kind_tag <ws+> author_tag <ws+> title <ws*> (suffix <ws*>)*
+<no_kind> = author_tag <ws+> title <ws*> (suffix <ws*>)*
+<title_only> = title
+
+<ws> = ' ' | '\u3000'
+<any> =  #'.'
+
+lparen   = '(' | '（'
+rparen   = ')' | '）'
+lbracket = '[' | '［'
+rbracket = ']' | '］'
+
+kind = !ws !rparen any+
+author = !ws !rbracket any+
+title = any+
+
+<kind_tag> = <lparen> kind <rparen>
+<author_tag> = <lbracket> author <rbracket>
+
+suffix = "完全版" | #"全\d+巻" | "(完)" | #"\d+-\d+" | #"第\d+巻-第\d+巻"
