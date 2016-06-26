@@ -1,8 +1,8 @@
 <S> = full_title / no_kind / title_only
 
-<full_title> = kind_tag <ws+> author_tag <ws+> title <ws*> (suffix <ws*>)*
-<no_kind> = author_tag <ws+> title <ws*> (suffix <ws*>)*
-<title_only> = title
+<full_title> = kind_tag <ws+> author_tag <ws+> title <ws*> (suffix <ws*>)* (extension?)
+<no_kind> = author_tag <ws+> title <ws*> (suffix <ws*>)* (extension?)
+<title_only> = title (extension?)
 
 <ws> = ' ' | '\u3000'
 <any> =  #'.'
@@ -16,7 +16,12 @@ kind = !ws !rparen any+
 author = !ws !rbracket any+
 title = any+
 
+extension = ".zip"
+
 <kind_tag> = <lparen> kind <rparen>
 <author_tag> = <lbracket> author <rbracket>
 
-suffix = "完全版" | #"全\d+巻" | "(完)" | #"\d+-\d+" | #"第\d+巻-第\d+巻"
+<suffix> = volume | misc-tag
+
+volume = <'第'> #"\d+" <'巻'>
+misc-tag =  "完全版" | #"全\d+巻" | "(完)" | #"v?\d+-\d+" | #"第\d+巻-第\d+巻" 

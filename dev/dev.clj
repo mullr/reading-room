@@ -11,7 +11,7 @@
    [clojure.string :as str]
    [clojure.test :as test]
    [clojure.tools.namespace.repl :refer [refresh refresh-all]]
-   [reading-room :as sys]))
+   [reading-room.web :as sys]))
 
 
 (def system
