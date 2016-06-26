@@ -6,7 +6,8 @@
             [ring.util.response :as res]
             [reading-room.web.routes :as routes]
             [prone.middleware :as prone]
-            [compojure.response])
+            [compojure.response]
+            [ring.middleware.webjars :refer [wrap-webjars]])
   (:import org.eclipse.jetty.server.Server
            java.net.URLDecoder))
 
@@ -58,10 +59,10 @@
 (defn make-app [config]
   (-> (fn [req]
         (routes/app req))
-      ;; wrap-render-hiccup
       (wrap-add-library (::library-path config))
       (wrap-add-config config)
       wrap-request-uri-decode
+      wrap-webjars
       prone/wrap-exceptions))
 
 (def system
