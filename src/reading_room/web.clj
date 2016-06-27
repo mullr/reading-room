@@ -30,10 +30,6 @@
                               ::library-path]))
 
 
-(defn wrap-render-hiccup [handler]
-  (fn [req]
-   ))
-
 (defn wrap-add-config [handler config]
   (fn [req]
     (handler (assoc req ::config config))))
