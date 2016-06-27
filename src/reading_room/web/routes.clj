@@ -82,15 +82,16 @@
       (finally
         (.dispose graphics)))))
 
-(defn volume-cover-image [{:keys [route-params ::rr/library]}]
-  (let [{:keys [title volume-num]} route-params
-        file (-> library
+(defn volume-image-stream [library title volume-num page-index]
+  (let [file (-> library
                  (rr/series-with-title title)
-                 (rr/volume (Integer/parseInt volume-num))
+                 (rr/volume volume-num)
                  ::rr/path)
-        cover-entry (first (zip/zip-entries file))
-        img-stream (zip/zip-entry-stream file cover-entry)
-        in (ImageIO/read img-stream)
+        page-entry (nth (zip/zip-entries file) page-index)]
+    (zip/zip-entry-stream file page-entry)))
+
+(defn thumbnail-image-stream [full-image-stream]
+  (let [in (ImageIO/read full-image-stream)
         scaled-img (render-image
                     (.getScaledInstance in 200 200 java.awt.Image/SCALE_SMOOTH))
         byte-stream (java.io.ByteArrayOutputStream.)]
@@ -98,7 +99,20 @@
     (ImageIO/write scaled-img "jpg" byte-stream)
     (java.io.ByteArrayInputStream. (.toByteArray byte-stream))))
 
+(defn volume-cover-image [{:keys [route-params ::rr/library]}]
+  (let [{:keys [title volume-num]} route-params
+        volume-num (Integer/parseInt volume-num)]
+    (thumbnail-image-stream
+     (volume-image-stream library title volume-num 0))))
+
+(defn volume-page-image [{:keys [route-params ::rr/library]}]
+  (let [{:keys [title volume-num page-num]} route-params
+        volume-num (Integer/parseInt volume-num)
+        page-num (Integer/parseInt page-num)]
+    (volume-image-stream library title volume-num (dec page-num))))
+
 (defroutes app
   (GET "/" [] show-library)
   (GET "/series/:title" [] show-series)
-  (GET "/series/:title/:volume-num/cover" [] volume-cover-image))
+  (GET "/series/:title/:volume-num/cover" [] volume-cover-image)
+  (GET "/series/:title/:volume-num/:page-num" [] volume-page-image))
