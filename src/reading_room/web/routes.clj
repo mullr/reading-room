@@ -66,7 +66,10 @@
       [:div "Can't find series with title " title]
       (page title
             [:div
-             [:h1 (::rr/title series)]
+             [:h1
+              (::rr/title series)
+              "&nbsp;"
+              [:a {:href "/"} "up"]]
 
              (grid (::rr/volumes series)
                    (fn [v]
@@ -80,6 +83,8 @@
   (page (str title " #" volume-num)
         [:div
          [:div.row
+          [:a {:href (series-url title)} "up"]
+          "&nbsp;"
           (when (> page-num 1)
             [:a {:href (page-url title volume-num (dec page-num))} "prev"])
           "&nbsp;"
