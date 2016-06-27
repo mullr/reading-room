@@ -2,5 +2,8 @@
 CLOSED: [2016-06-26 Sun 21:42]
 * TODO Scale comics better on the reading page
 * TODO Scale thumbnails without distorting aspect
-* TODO Up link / nav from the reading page
+* DONE Up link / nav from the reading page
+CLOSED: [2016-06-26 Sun 21:53]
 * TODO Broken links on the series page
+* DONE Caching for thumbnail generation
+CLOSED: [2016-06-26 Sun 22:31]

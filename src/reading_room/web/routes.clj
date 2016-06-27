@@ -1,7 +1,7 @@
 (ns reading-room.web.routes
   (:require [reading-room.core :as rr]
             [reading-room.zip :as zip]
-            [reading-room.image :refer [volume-image-stream thumbnail-image-stream]]
+            [reading-room.image :as im :refer [volume-image-stream]]
             [compojure.core :refer [defroutes GET]]))
 
 (defn series-url [title]
@@ -96,8 +96,8 @@
 
 
 (defn cover-image [{:keys [library title volume-num]}]
-  (thumbnail-image-stream
-   (volume-image-stream library title volume-num 0)))
+  (java.io.ByteArrayInputStream.
+   (im/thumbnail-image-bytes library title volume-num 0 200)))
 
 (defn page-image [{:keys [library title volume-num page-num]}]
   (volume-image-stream library title volume-num (dec page-num)))

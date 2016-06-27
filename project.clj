@@ -13,6 +13,7 @@
                  [compojure "1.5.1"]
                  [org.webjars/bootstrap "4.0.0-alpha.2"]
                  [org.webjars/font-awesome "4.6.3"]
-                 [ring-webjars "0.1.1"]]
+                 [ring-webjars "0.1.1"]
+                 [org.clojure/core.cache "0.6.5" :exclusions [org.clojure/clojure]]]
   :profiles {:dev {:dependencies [[org.clojure/tools.namespace "0.2.11"]]
                    :source-paths ["dev"]}})

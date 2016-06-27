@@ -1,7 +1,8 @@
 (ns reading-room.image
   (:require [reading-room
              [core :as rr]
-             [zip :as zip]])
+             [zip :as zip]]
+            [clojure.core.cache :as cache])
   (:import java.awt.image.BufferedImage
            javax.imageio.ImageIO))
 
@@ -25,12 +26,28 @@
     (zip/zip-entry-stream file page-entry)))
 
 
-(defn thumbnail-image-stream [full-image-stream]
-  (let [in (ImageIO/read full-image-stream)
+(defn thumbnail-image-bytes-impl [library title volume-num page-index dimension]
+  ;; todo: with-open stuff in here
+  (let [full-image-stream (volume-image-stream library title volume-num page-index)
+        in (ImageIO/read full-image-stream)
         scaled-img (render-image
-                    (.getScaledInstance in 200 200 java.awt.Image/SCALE_SMOOTH))
+                    (.getScaledInstance in dimension dimension java.awt.Image/SCALE_SMOOTH))
         byte-stream (java.io.ByteArrayOutputStream.)]
-    ;; this is pretty darn inefficient
     (ImageIO/write scaled-img "jpg" byte-stream)
-    (java.io.ByteArrayInputStream. (.toByteArray byte-stream))))
+    (.toByteArray byte-stream)))
 
+
+(def ^:dynamic *thumbnail-cache*
+  (atom (cache/lru-cache-factory {} :threshold 1024)))
+
+(defn thumbnail-image-bytes [library title volume-num page-index dimension]
+  (let [cache-key [title volume-num page-index dimension]]
+    (if-let [thumb-bytes (cache/lookup @*thumbnail-cache* cache-key)]
+      (do
+        (swap! *thumbnail-cache*
+               cache/hit cache-key)
+        thumb-bytes)
+      (let [thumb-bytes (thumbnail-image-bytes-impl library title volume-num page-index dimension)]
+        (swap! *thumbnail-cache*
+               cache/miss cache-key thumb-bytes)
+        thumb-bytes))))
