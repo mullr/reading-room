@@ -8,14 +8,14 @@
 (defn series-url [title]
   (str "/series/" title))
 
-(defn volume-cover-url [title volume-num]
+(defn cover-url [title volume-num]
   (str "/series/" title "/" volume-num "/cover.jpg"))
 
-(defn volume-page-url [title volume-num page-num]
+(defn page-url [title volume-num page-num]
   (str "/series/" title "/" volume-num "/page/" page-num))
 
-(defn volume-page-image-url [title volume-num page-num]
-  (str (volume-page-url title volume-num page-num) ".jpg"))
+(defn page-image-url [title volume-num page-num]
+  (str (page-url title volume-num page-num) ".jpg"))
 
 (defn page [title content]
   ;; bootstrap boilerplate
@@ -55,7 +55,7 @@
          (grid library
                (fn [{:keys [::rr/author ::rr/title ::rr/volumes]}]
                  (thumb-with-caption
-                  {:url (volume-cover-url title 1)
+                  {:url (cover-url title 1)
                    :href (series-url title)
                    :caption [:p title "&nbsp;"
                              (when author (str "(" author  ")"))]})))]))
@@ -72,23 +72,23 @@
                    (fn [v]
                      (let [volume-num (::rr/volume-num v)]
                        (thumb-with-caption
-                        {:url (volume-cover-url title volume-num)
-                         :href (volume-page-url title volume-num 1)
+                        {:url (cover-url title volume-num)
+                         :href (page-url title volume-num 1)
                          :caption [:p "Volume " volume-num]}))))]))))
 
-(defn show-volume-page [{:keys [library title volume-num page-num]}]
+(defn show-page [{:keys [library title volume-num page-num]}]
   (page (str title " #" volume-num)
         [:div
          [:div.row
           (when (> page-num 1)
-            [:a {:href (volume-page-url title volume-num (dec page-num))} "prev"])
+            [:a {:href (page-url title volume-num (dec page-num))} "prev"])
           "&nbsp;"
           page-num
           "&nbsp;"
           (when true
-            [:a {:href (volume-page-url title volume-num (inc page-num))} "next"])]
+            [:a {:href (page-url title volume-num (inc page-num))} "next"])]
          [:div.row
-          [:img {:src (volume-page-image-url title volume-num page-num)}]]]))
+          [:img {:src (page-image-url title volume-num page-num)}]]]))
 
 (defn render-image [in]
   (let [w (.getWidth in nil)
@@ -118,11 +118,11 @@
     (ImageIO/write scaled-img "jpg" byte-stream)
     (java.io.ByteArrayInputStream. (.toByteArray byte-stream))))
 
-(defn volume-cover-image [{:keys [library title volume-num]}]
+(defn cover-image [{:keys [library title volume-num]}]
   (thumbnail-image-stream
    (volume-image-stream library title volume-num 0)))
 
-(defn volume-page-image [{:keys [library title volume-num page-num]}]
+(defn page-image [{:keys [library title volume-num page-num]}]
   (volume-image-stream library title volume-num (dec page-num)))
 
 (defn maybe-parse-int [s]
@@ -142,8 +142,8 @@
   (GET "/series/:title" [:as req]
     (show-series (munge-request-map req)))
   (GET "/series/:title/:volume-num/cover.jpg" [:as req]
-    (volume-cover-image (munge-request-map req)))
+    (cover-image (munge-request-map req)))
   (GET "/series/:title/:volume-num/page/:page-num.jpg" [:as req]
-    (volume-page-image (munge-request-map req)))
+    (page-image (munge-request-map req)))
   (GET "/series/:title/:volume-num/page/:page-num" [:as req]
-    (show-volume-page (munge-request-map req))))
+    (show-page (munge-request-map req))))
