@@ -1,7 +1,9 @@
 (ns reading-room.web.routes
   (:require [reading-room.core :as rr]
             [reading-room.zip :as zip]
-            [compojure.core :refer [defroutes GET]]))
+            [compojure.core :refer [defroutes GET]])
+  (:import [java.awt.image BufferedImage]
+           [javax.imageio ImageIO]))
 
 (defn series-url [title]
   (str "/series/" title))
@@ -19,8 +21,9 @@
     ;; content must come *after* these tags
     [:title title]
 
-    [:link {:href "/assets/bootstrap/css/bootstrap.css" :rel "stylesheet"}]]
-   [:body
+    [:link {:href "/assets/bootstrap/css/bootstrap.css" :rel "stylesheet"}]
+    [:link {:href "/assets/bootstrap/css/bootstrap-theme.css" :rel "stylesheet"}]]
+   [:body {:role "document"}
     content
     [:script {:src "https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"}]
     [:script {:src "/assets/bootstrap/js/bootstrap.js"}]]])
@@ -43,15 +46,33 @@
     (if-not series
       [:div "Can't find series with title " title]
       (page title
-       [:span
-        [:p "Title:" (::rr/title series)]
-        (for [v (::rr/volumes series)]
-          (let [volume-num (::rr/volume-num v)]
-            [:figure
-             [:img {:src (volume-cover-url title volume-num)
-                    :width "150px"
-                    :height "200px"}]
-             [:figcaption "Volume " volume-num]]))]))))
+            [:div.container
+             [:h1 (::rr/title series)]
+
+             (for [row (partition-all 5 (::rr/volumes series))]
+               [:div.row
+                (for [v row]
+                  (let [volume-num (::rr/volume-num v)]
+                    [:div.col-sm-6.col-md-4
+                     [:div.thumbnail
+                      [:img {:src (volume-cover-url title volume-num)}]
+                      [:div.caption
+                       [:p "Volume " volume-num]]
+                      ]]))])]))))
+
+
+;; <div class="row">
+;; <div class="col-sm-6 col-md-4">
+;; <div class="thumbnail">
+;; <img src="..." alt="...">
+;; <div class="caption">
+;; <h3>Thumbnail label</h3>
+;; <p>...</p>
+;; <p><a href="#" class="btn btn-primary" role="button">Button</a> <a href="#" class="btn btn-default" role="button">Button</a></p>
+;; </div>
+;; </div>
+;; </div>
+;; </div>
 
 (defn volume-cover-image [{:keys [route-params ::rr/library]}]
   (let [{:keys [title volume-num]} route-params
@@ -59,7 +80,15 @@
                  (rr/series-with-title title)
                  (rr/volume (Integer/parseInt volume-num))
                  ::rr/path)
-        cover-entry (first (zip/zip-entries file))]
+        cover-entry (first (zip/zip-entries file))
+        img (BufferedImage. 200 -1 BufferedImage/TYPE_INT_RGB)
+        _ (ImageIO/write )
+        scaled (.getScaledInstance img)]
+
+    ;; BufferedImage img = new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB);
+    ;; img.createGraphics().drawImage(ImageIO.read(new File("test.jpg")).getScaledInstance(100, 100, Image.SCALE_SMOOTH),0,0,null);
+    ;; ImageIO.write(img, "jpg", new File("test_thumb.jpg"));
+
     (zip/zip-entry-stream file cover-entry)))
 
 (defroutes app
