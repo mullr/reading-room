@@ -63,4 +63,4 @@
   (->> library (filter #(= title (::title %))) first))
 
 (defn volume [series volume-num]
-  (get (::volumes series) volume-num))
+  (get (::volumes series) (dec volume-num)))

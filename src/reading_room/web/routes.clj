@@ -12,6 +12,7 @@
   (str "/series/" title "/" volume-num "/cover"))
 
 (defn page [title content]
+  ;; bootstrap boilerplate
   [:html {:lang "en"}
    [:head
     [:meta {:charset "utf-8"}]
@@ -28,17 +29,31 @@
     [:script {:src "https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"}]
     [:script {:src "/assets/bootstrap/js/bootstrap.js"}]]])
 
+(defn grid [item-seq layout-item-fn]
+  (for [row (partition-all 3 item-seq)]
+    [:div.row
+     (for [item row]
+       [:div.col-sm-6.col-md-4
+        (layout-item-fn item)])]))
+
+(defn thumb-with-caption [image-url caption]
+  [:div.thumbnail
+   [:img {:src image-url}]
+   [:div.caption
+    caption]])
+
 (defn show-library [req]
   (page "library"
-   [:div
-    (for [{:keys [::rr/author ::rr/title ::rr/volumes]}
-          (::rr/library req)]
-      [:div
-       [:dl
-        [:dt "Author"] [:dd author]
-        [:dt "Title"] [:dd [:a {:href (series-url title)}
-                            title]]
-        [:dt "Volume count"] [:dd (count volumes)]]])]))
+        [:div
+         (grid (::rr/library req)
+               (fn [{:keys [::rr/author ::rr/title ::rr/volumes]}]
+                 (thumb-with-caption
+                  (volume-cover-url title 1)
+                  [:p
+                   [:a {:href (series-url title)} title]
+                   "&nbsp;"
+                   (when author
+                     (str "(" author  ")"))])))]))
 
 (defn show-series [{:keys [route-params ::rr/library]}]
   (let [title (:title route-params)
@@ -49,15 +64,12 @@
             [:div.container
              [:h1 (::rr/title series)]
 
-             (for [row (partition-all 5 (::rr/volumes series))]
-               [:div.row
-                (for [v row]
-                  (let [volume-num (::rr/volume-num v)]
-                    [:div.col-sm-6.col-md-4
-                     [:div.thumbnail
-                      [:img {:src (volume-cover-url title volume-num)}]
-                      [:div.caption
-                       [:p "Volume " volume-num]]]]))])]))))
+             (grid (::rr/volumes series)
+                   (fn [v]
+                     (let [volume-num (::rr/volume-num v)]
+                       (thumb-with-caption
+                        (volume-cover-url title volume-num)
+                        [:p "Volume " volume-num]))))]))))
 
 (defn render-image [in]
   (let [w (.getWidth in nil)
