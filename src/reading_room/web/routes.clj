@@ -57,22 +57,18 @@
                      [:div.thumbnail
                       [:img {:src (volume-cover-url title volume-num)}]
                       [:div.caption
-                       [:p "Volume " volume-num]]
-                      ]]))])]))))
+                       [:p "Volume " volume-num]]]]))])]))))
 
-
-;; <div class="row">
-;; <div class="col-sm-6 col-md-4">
-;; <div class="thumbnail">
-;; <img src="..." alt="...">
-;; <div class="caption">
-;; <h3>Thumbnail label</h3>
-;; <p>...</p>
-;; <p><a href="#" class="btn btn-primary" role="button">Button</a> <a href="#" class="btn btn-default" role="button">Button</a></p>
-;; </div>
-;; </div>
-;; </div>
-;; </div>
+(defn render-image [in]
+  (let [w (.getWidth in nil)
+        h (.getHeight in nil)
+        out (BufferedImage. w h BufferedImage/TYPE_INT_RGB)
+        graphics (.createGraphics out)]
+    (try
+      (.drawImage graphics in 0 0 nil)
+      out
+      (finally
+        (.dispose graphics)))))
 
 (defn volume-cover-image [{:keys [route-params ::rr/library]}]
   (let [{:keys [title volume-num]} route-params
@@ -81,15 +77,14 @@
                  (rr/volume (Integer/parseInt volume-num))
                  ::rr/path)
         cover-entry (first (zip/zip-entries file))
-        img (BufferedImage. 200 -1 BufferedImage/TYPE_INT_RGB)
-        _ (ImageIO/write )
-        scaled (.getScaledInstance img)]
-
-    ;; BufferedImage img = new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB);
-    ;; img.createGraphics().drawImage(ImageIO.read(new File("test.jpg")).getScaledInstance(100, 100, Image.SCALE_SMOOTH),0,0,null);
-    ;; ImageIO.write(img, "jpg", new File("test_thumb.jpg"));
-
-    (zip/zip-entry-stream file cover-entry)))
+        img-stream (zip/zip-entry-stream file cover-entry)
+        in (ImageIO/read img-stream)
+        scaled-img (render-image
+                    (.getScaledInstance in 200 200 java.awt.Image/SCALE_SMOOTH))
+        byte-stream (java.io.ByteArrayOutputStream.)]
+    ;; this is pretty darn inefficient
+    (ImageIO/write scaled-img "jpg" byte-stream)
+    (java.io.ByteArrayInputStream. (.toByteArray byte-stream))))
 
 (defroutes app
   (GET "/" [] show-library)
