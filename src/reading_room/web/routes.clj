@@ -9,7 +9,13 @@
   (str "/series/" title))
 
 (defn volume-cover-url [title volume-num]
-  (str "/series/" title "/" volume-num "/cover"))
+  (str "/series/" title "/" volume-num "/cover.jpg"))
+
+(defn volume-page-url [title volume-num page-num]
+  (str "/series/" title "/" volume-num "/page/" page-num))
+
+(defn volume-page-image-url [title volume-num page-num]
+  (str (volume-page-url title volume-num page-num) ".jpg"))
 
 (defn page [title content]
   ;; bootstrap boilerplate
@@ -25,7 +31,8 @@
     [:link {:href "/assets/bootstrap/css/bootstrap.css" :rel "stylesheet"}]
     [:link {:href "/assets/bootstrap/css/bootstrap-theme.css" :rel "stylesheet"}]]
    [:body {:role "document"}
-    content
+    [:div.container
+     content]
     [:script {:src "https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"}]
     [:script {:src "/assets/bootstrap/js/bootstrap.js"}]]])
 
@@ -36,11 +43,11 @@
        [:div.col-sm-6.col-md-4
         (layout-item-fn item)])]))
 
-(defn thumb-with-caption [image-url caption]
+(defn thumb-with-caption [{:keys [url href caption]}]
   [:div.thumbnail
-   [:img {:src image-url}]
+   [:a {:href href} [:img {:src url}]]
    [:div.caption
-    caption]])
+    [:a {:href href} caption]]])
 
 (defn show-library [req]
   (page "library"
@@ -48,12 +55,10 @@
          (grid (::rr/library req)
                (fn [{:keys [::rr/author ::rr/title ::rr/volumes]}]
                  (thumb-with-caption
-                  (volume-cover-url title 1)
-                  [:p
-                   [:a {:href (series-url title)} title]
-                   "&nbsp;"
-                   (when author
-                     (str "(" author  ")"))])))]))
+                  {:url (volume-cover-url title 1)
+                   :href (series-url title)
+                   :caption [:p title "&nbsp;"
+                             (when author (str "(" author  ")"))]})))]))
 
 (defn show-series [{:keys [route-params ::rr/library]}]
   (let [title (:title route-params)
@@ -61,15 +66,33 @@
     (if-not series
       [:div "Can't find series with title " title]
       (page title
-            [:div.container
+            [:div
              [:h1 (::rr/title series)]
 
              (grid (::rr/volumes series)
                    (fn [v]
                      (let [volume-num (::rr/volume-num v)]
                        (thumb-with-caption
-                        (volume-cover-url title volume-num)
-                        [:p "Volume " volume-num]))))]))))
+                        {:url (volume-cover-url title volume-num)
+                         :href (volume-page-url title volume-num 1)
+                         :caption [:p "Volume " volume-num]}))))]))))
+
+(defn show-volume-page [{:keys [route-params ::rr/library]}]
+  (let [{:keys [title volume-num page-num]} route-params
+        volume-num (Integer/parseInt volume-num)
+        page-num (Integer/parseInt page-num)]
+    (page (str title " #" volume-num)
+          [:div
+           [:div.row
+            (when (> page-num 1)
+              [:a {:href (volume-page-url title volume-num (dec page-num))} "prev"])
+            "&nbsp;"
+            page-num
+            "&nbsp;"
+            (when true
+              [:a {:href (volume-page-url title volume-num (inc page-num))} "next"])]
+           [:div.row
+            [:img {:src (volume-page-image-url title volume-num page-num)}]]])))
 
 (defn render-image [in]
   (let [w (.getWidth in nil)
@@ -114,5 +137,6 @@
 (defroutes app
   (GET "/" [] show-library)
   (GET "/series/:title" [] show-series)
-  (GET "/series/:title/:volume-num/cover" [] volume-cover-image)
-  (GET "/series/:title/:volume-num/:page-num" [] volume-page-image))
+  (GET "/series/:title/:volume-num/cover.jpg" [] volume-cover-image)
+  (GET "/series/:title/:volume-num/page/:page-num.jpg" [] volume-page-image)
+  (GET "/series/:title/:volume-num/page/:page-num" [] show-volume-page))
