@@ -39,8 +39,8 @@
 (defn render [image]
   (let [buffered-image (with-open [s (image-stream image)]
                     (ImageIO/read s))]
-    (if-let [w (::width image)]
-      (Scalr/resize buffered-image w nil)
+    (if-let [width (::width image)]
+      (Scalr/resize buffered-image org.imgscalr.Scalr$Method/ULTRA_QUALITY width nil)
       buffered-image)))
 
 (defn- render-to-output-stream-nocache [image output-stream]
