@@ -9,7 +9,8 @@
             [compojure.response]
             [ring.middleware.webjars :refer [wrap-webjars]])
   (:import org.eclipse.jetty.server.Server
-           java.net.URLDecoder))
+           java.net.URLDecoder)
+  (:gen-class))
 
 (s/def :jetty/port integer?)
 (s/def :jetty/join? boolean?)
@@ -76,3 +77,6 @@
 (defn stop [s]
   (.stop (::server s))
   (dissoc s ::server))
+
+(defn -main [& args]
+  (start system))

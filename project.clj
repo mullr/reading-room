@@ -18,4 +18,6 @@
                  [org.imgscalr/imgscalr-lib "4.2"]
                  [net.mikera/imagez "0.10.0" :exclusions [org.clojure/clojure]]]
   :profiles {:dev {:dependencies [[org.clojure/tools.namespace "0.2.11"]]
-                   :source-paths ["dev"]}})
+                   :source-paths ["dev"]}}
+
+  :main reading-room.web)
