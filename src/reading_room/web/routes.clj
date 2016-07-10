@@ -4,7 +4,8 @@
             [reading-room.image :as im]
             [compojure.core :refer [defroutes GET]]
             [ring.util.response :as response]
-            [ring.util.io :as ring-io]))
+            [ring.util.io :as ring-io]
+            [clojure.java.io :as io]))
 
 (defn series-url [title]
   (str "/series/" title))
@@ -17,6 +18,9 @@
 
 (defn page-image-url [title volume-num page-num]
   (str (page-url title volume-num page-num) ".jpg"))
+
+(defn download-volume-url [title volume-num]
+  (str "/series/" title "/" volume-num "/download/" title " - " volume-num ".zip"))
 
 (defn page [title content]
   ;; bootstrap boilerplate
@@ -78,7 +82,10 @@
                        (thumb-with-caption
                         {:url (cover-url series-title volume-num)
                          :href (page-url series-title volume-num 1)
-                         :caption [:p "Volume " volume-num]}))))]))))
+                         :caption [:p
+                                   "Volume " volume-num
+                                   "&nbsp;"
+                                   [:a {:href (download-volume-url series-title volume-num)} "(Download)"]]}))))]))))
 
 (defn show-page [{:keys [library series-title volume-num page-num]}]
   (page (str series-title " #" volume-num)
@@ -128,6 +135,14 @@
       (-> (rr/page-image library series-title volume-num page-num)
           (im/render-to-output-stream output-stream))))))
 
+(defn download-volume [{:keys [library series-title volume-num]}]
+  (response/response
+   (io/input-stream
+    (-> library
+        (rr/series-with-title series-title)
+        (rr/volume volume-num)
+        ::rr/path))))
+
 (defn maybe-parse-int [s]
   (when s
     (Integer/parseInt s)))
@@ -144,6 +159,8 @@
     (show-library (munge-request-map req)))
   (GET "/series/:series-title" [:as req]
     (show-series (munge-request-map req)))
+  (GET "/series/:series-title/:volume-num/download/:file-name" [:as req]
+    (download-volume (munge-request-map req)))
   (GET "/series/:series-title/:volume-num/cover.jpg" [:as req]
     (cover-image (munge-request-map req)))
   (GET "/series/:series-title/:volume-num/page/:page-num.jpg" [:as req]
