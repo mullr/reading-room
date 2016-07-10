@@ -1,7 +1,8 @@
 (ns reading-room.core
   (:require [clojure.java.io :as io]
             [clojure.spec :as s]
-            [instaparse.core :as insta]))
+            [instaparse.core :as insta]
+            [reading-room.zip :as zip]))
 
 (s/def ::path string?)
 (s/def ::title string?)
@@ -64,3 +65,13 @@
 
 (defn volume [series volume-num]
   (get (::volumes series) (dec volume-num)))
+
+(defn page-image [library series-title volume-num page-index]
+  (let [archive-path (-> library
+                         (series-with-title series-title)
+                         (volume volume-num)
+                         ::path)]
+    #:reading-room.image
+    {:type :reading-room.image/archive
+     :archive-path archive-path
+     :entry-name (nth (zip/zip-entries archive-path) page-index)}))

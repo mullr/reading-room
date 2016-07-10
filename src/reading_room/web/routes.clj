@@ -1,8 +1,10 @@
 (ns reading-room.web.routes
   (:require [reading-room.core :as rr]
             [reading-room.zip :as zip]
-            [reading-room.image :as im :refer [volume-image-stream]]
-            [compojure.core :refer [defroutes GET]]))
+            [reading-room.image :as im]
+            [compojure.core :refer [defroutes GET]]
+            [ring.util.response :as response]
+            [ring.util.io :as ring-io]))
 
 (defn series-url [title]
   (str "/series/" title))
@@ -59,11 +61,11 @@
                    :caption [:p title "&nbsp;"
                              (when author (str "(" author  ")"))]})))]))
 
-(defn show-series [{:keys [library title]}]
-  (let [series (rr/series-with-title library title)]
+(defn show-series [{:keys [library series-title]}]
+  (let [series (rr/series-with-title library series-title)]
     (if-not series
-      [:div "Can't find series with title " title]
-      (page title
+      [:div "Can't find series with title " series-title]
+      (page series-title
             [:div
              [:h1
               (::rr/title series)
@@ -74,53 +76,66 @@
                    (fn [v]
                      (let [volume-num (::rr/volume-num v)]
                        (thumb-with-caption
-                        {:url (cover-url title volume-num)
-                         :href (page-url title volume-num 1)
+                        {:url (cover-url series-title volume-num)
+                         :href (page-url series-title volume-num 1)
                          :caption [:p "Volume " volume-num]}))))]))))
 
-(defn show-page [{:keys [library title volume-num page-num]}]
-  (page (str title " #" volume-num)
+(defn show-page [{:keys [library series-title volume-num page-num]}]
+  (page (str series-title " #" volume-num)
         [:div
          [:div.row
-          [:a {:href (series-url title)} "up"]
+          [:a {:href (series-url series-title)} "up"]
           "&nbsp;"
           (when (> page-num 1)
-            [:a {:href (page-url title volume-num (dec page-num))} "prev"])
+            [:a {:href (page-url series-title volume-num (dec page-num))} "prev"])
           "&nbsp;"
           page-num
           "&nbsp;"
           (when true
-            [:a {:href (page-url title volume-num (inc page-num))} "next"])]
+            [:a {:href (page-url series-title volume-num (inc page-num))} "next"])]
          [:div.row
-          [:img {:src (page-image-url title volume-num page-num)}]]]))
+          [:img {:src (page-image-url series-title volume-num page-num)}]]]))
 
 
-(defn cover-image [{:keys [library title volume-num]}]
-  (java.io.ByteArrayInputStream.
-   (im/thumbnail-image-bytes library title volume-num 0 200)))
+(defn cover-image [{:keys [library series-title volume-num]}]
+  (response/response
+   (ring-io/piped-input-stream
+    (fn [output-stream]
+      (try
+       (-> (rr/page-image library series-title volume-num 0)
+           (assoc ::im/width 200)
+           (im/render-to-output-stream output-stream))
+       (catch Exception e
+         (println e)
+         (throw e))
+       )))))
 
-(defn page-image [{:keys [library title volume-num page-num]}]
-  (volume-image-stream library title volume-num (dec page-num)))
+(defn page-image [{:keys [library series-title volume-num page-num]}]
+  (response/response
+   (ring-io/piped-input-stream
+    (fn [output-stream]
+      (-> (rr/page-image library series-title volume-num page-num)
+          (im/render-to-output-stream output-stream))))))
 
 (defn maybe-parse-int [s]
   (when s
     (Integer/parseInt s)))
 
 (defn munge-request-map [req]
-  (let [{:keys [title volume-num page-num]} (:route-params req)]
+  (let [{:keys [series-title volume-num page-num]} (:route-params req)]
     {:library (::rr/library req)
-     :title title
+     :series-title series-title
      :volume-num (maybe-parse-int volume-num)
      :page-num (maybe-parse-int page-num)}))
 
 (defroutes app
   (GET "/" [:as req]
     (show-library (munge-request-map req)))
-  (GET "/series/:title" [:as req]
+  (GET "/series/:series-title" [:as req]
     (show-series (munge-request-map req)))
-  (GET "/series/:title/:volume-num/cover.jpg" [:as req]
+  (GET "/series/:series-title/:volume-num/cover.jpg" [:as req]
     (cover-image (munge-request-map req)))
-  (GET "/series/:title/:volume-num/page/:page-num.jpg" [:as req]
+  (GET "/series/:series-title/:volume-num/page/:page-num.jpg" [:as req]
     (page-image (munge-request-map req)))
-  (GET "/series/:title/:volume-num/page/:page-num" [:as req]
+  (GET "/series/:series-title/:volume-num/page/:page-num" [:as req]
     (show-page (munge-request-map req))))
