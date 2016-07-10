@@ -36,12 +36,26 @@
   (zip/zip-entry-stream (::archive-path image)
                         (::entry-name image)))
 
+;;; image transformations
+
+(defn resize-image [buffered-image width]
+  (Scalr/resize buffered-image org.imgscalr.Scalr$Method/ULTRA_QUALITY width nil))
+
+(defn crop-image [buffered-image kind]
+  (case kind
+    ::left-half (-> buffered-image
+                    (.getSubimage 0 0 (/ (.getWidth buffered-image) 2) (.getHeight buffered-image))
+                    imagez/copy)))
+
+;;; regular rendering
+
 (defn render [image]
-  (let [buffered-image (with-open [s (image-stream image)]
-                    (ImageIO/read s))]
-    (if-let [width (::width image)]
-      (Scalr/resize buffered-image org.imgscalr.Scalr$Method/ULTRA_QUALITY width nil)
-      buffered-image)))
+  (let [buffered-image (with-open [s (image-stream image)] (ImageIO/read s))]
+    (-> buffered-image
+        ((if-let [crop-kind (::crop image)] #(crop-image % crop-kind) identity))
+        ((if-let [width (::width image)] #(resize-image % width) identity)))))
+
+;;; cached rendering
 
 (defn- render-to-output-stream-nocache [image output-stream]
   (let [rendered (render image)]
@@ -58,10 +72,12 @@
   (atom (cache/lru-cache-factory {} :threshold 1024)))
 
 (defn- cachable? [image]
-  (contains? image ::width))
+  (or (contains? image ::width)
+      (contains? image ::crop)))
 
 (defn- directly-streamable? [image]
-  (not (contains? image ::width)))
+  (and (not (contains? image ::width))
+       (not (contains? image ::crop))))
 
 (defn render-to-output-stream [image output-stream]
   (cond
@@ -78,3 +94,9 @@
                           (io/copy (java.io.ByteArrayInputStream. image-bytes) output-stream)))
 
     :default (render-to-output-stream-nocache image output-stream)))
+
+(defn aspect [image]
+  (let [buffered-image (with-open [s (image-stream image)]
+                         (ImageIO/read s))]
+    (/ (.getWidth buffered-image)
+       (.getHeight buffered-image))))

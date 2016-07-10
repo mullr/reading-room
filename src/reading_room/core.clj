@@ -66,12 +66,18 @@
 (defn volume [series volume-num]
   (get (::volumes series) (dec volume-num)))
 
-(defn page-image [library series-title volume-num page-index]
+(defn page-images [library series-title volume-num]
   (let [archive-path (-> library
                          (series-with-title series-title)
                          (volume volume-num)
                          ::path)]
-    #:reading-room.image
-    {:type :reading-room.image/archive
-     :archive-path archive-path
-     :entry-name (nth (zip/zip-entries archive-path) page-index)}))
+    (->> (zip/zip-entries archive-path)
+         (map (fn [entry-name]
+                #:reading-room.image
+                {:type :reading-room.image/archive
+                 :archive-path archive-path
+                 :entry-name entry-name})))))
+
+(defn page-image [library series-title volume-num page-index]
+  (nth (page-images library series-title volume-num)
+       page-index))

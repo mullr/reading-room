@@ -97,18 +97,29 @@
           [:img {:src (page-image-url series-title volume-num page-num)}]]]))
 
 
+(defn- likely-cover-image [library series-title volume-num]
+  (println "Looking for a cover iamge")
+  (when-let [wide-cover (->> (rr/page-images library series-title volume-num)
+                             (take 10)
+                             (filter #(> (im/aspect %) 1))
+                             (first))]
+    (println "got candidate!" wide-cover)
+    (assoc wide-cover
+           ::im/crop ::im/left-half)))
+
 (defn cover-image [{:keys [library series-title volume-num]}]
   (response/response
    (ring-io/piped-input-stream
     (fn [output-stream]
       (try
-       (-> (rr/page-image library series-title volume-num 0)
-           (assoc ::im/width 200)
-           (im/render-to-output-stream output-stream))
-       (catch Exception e
-         (println e)
-         (throw e))
-       )))))
+        (let [cover-image (or ;; (likely-cover-image library series-title volume-num)
+                              (rr/page-image library series-title volume-num 0))]
+          (-> cover-image
+              (assoc ::im/width 200)
+              (im/render-to-output-stream output-stream)))
+        (catch Exception e
+          (println e)
+          (throw e)))))))
 
 (defn page-image [{:keys [library series-title volume-num page-num]}]
   (response/response
