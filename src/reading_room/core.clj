@@ -13,7 +13,7 @@
 (s/def ::volume (s/keys :req [::title ::path]
                         :opt [::kind ::author ::volume-num]))
 
-(s/def ::volumes (s/coll-of ::volume []))
+(s/def ::volumes (s/coll-of ::volume))
 (s/def ::series (s/keys :req [::title ::path ::volumes]
                         ::opt [::kind ::author]))
 

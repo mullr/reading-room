@@ -3,7 +3,7 @@
   :url "TODO"
   :license {:name "TODO: Choose a license"
             :url "http://choosealicense.com/"}
-  :dependencies [[org.clojure/clojure "1.9.0-alpha6"]
+  :dependencies [[org.clojure/clojure "1.9.0-alpha9"]
                  [ring "1.5.0"]
                  [hiccup "1.0.5"]
                  [ring/ring-jetty-adapter "1.5.0"]
