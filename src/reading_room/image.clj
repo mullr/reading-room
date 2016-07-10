@@ -5,7 +5,8 @@
             [clojure.core.cache :as cache]
             [clojure.spec :as s]
             [mikera.image.core :as imagez]
-            [clojure.java.io :as io])
+            [clojure.java.io :as io]
+            [reading-room.image :as im])
   (:import java.awt.image.BufferedImage
            javax.imageio.ImageIO
            org.imgscalr.Scalr))
@@ -59,13 +60,21 @@
 (defn- cachable? [image]
   (contains? image ::width))
 
+(defn- directly-streamable? [image]
+  (not (contains? image ::width)))
+
 (defn render-to-output-stream [image output-stream]
-  (if (cachable? image)
-    (if-let [image-bytes (cache/lookup @*render-cache* image)]
-      (do
-        (swap! *render-cache* cache/hit image)
-        (io/copy (java.io.ByteArrayInputStream. image-bytes) output-stream))
-      (let [image-bytes (render-to-byte-array-nocache image)]
-        (swap! *render-cache* cache/miss image image-bytes)
-        (io/copy (java.io.ByteArrayInputStream. image-bytes) output-stream)))
-    (render-to-output-stream-nocache image output-stream)))
+  (cond
+    (directly-streamable? image) (with-open [s (im/image-stream image)]
+                                   (io/copy s output-stream)
+                                   (.flush output-stream))
+
+    (cachable? image) (if-let [image-bytes (cache/lookup @*render-cache* image)]
+                        (do
+                          (swap! *render-cache* cache/hit image)
+                          (io/copy (java.io.ByteArrayInputStream. image-bytes) output-stream))
+                        (let [image-bytes (render-to-byte-array-nocache image)]
+                          (swap! *render-cache* cache/miss image image-bytes)
+                          (io/copy (java.io.ByteArrayInputStream. image-bytes) output-stream)))
+
+    :default (render-to-output-stream-nocache image output-stream)))
