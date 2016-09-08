@@ -63,7 +63,7 @@
       prone/wrap-exceptions))
 
 (def system
-  {::config {::jetty-config {:port 3000
+  {::config {::jetty-config {:port 4000
                              :join? false}
              ::library-path "/home/mullr/storage/Manga"}})
 

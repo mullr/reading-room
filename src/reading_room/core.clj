@@ -10,6 +10,7 @@
 (s/def ::kind string?)
 (s/def ::author string?)
 (s/def ::volume-num integer?)
+;; (s/def ::page-num integer?)
 
 (s/def ::volume (s/keys :req [::title ::path]
                         :opt [::kind ::author ::volume-num]))
@@ -19,6 +20,9 @@
                         ::opt [::kind ::author]))
 
 (s/def ::library (s/keys :req [::path ::volumes]))
+
+;; (s/def ::page (s/and ::volume
+;;                      (s/keys :req [::page-num])))
 
 (def manga-name-parser
   (insta/parser (io/resource "manga_name.bnf")))

@@ -11,6 +11,7 @@
            javax.imageio.ImageIO
            org.imgscalr.Scalr))
 
+
 (defmulti image-type ::type)
 (s/def ::basic-image (s/multi-spec image-type ::type))
 
@@ -24,8 +25,11 @@
   (s/keys :req [::archive-path ::entry-name]))
 
 (s/def ::width integer?)
+(s/def ::height integer?)
 (s/def ::image (s/and ::basic-image
                       (s/keys :opt [::width])))
+
+(s/def ::dimensions (s/keys :req [::width ::height]))
 
 (defmulti image-stream ::type)
 
@@ -35,6 +39,7 @@
 (defmethod image-stream ::archive [image]
   (zip/zip-entry-stream (::archive-path image)
                         (::entry-name image)))
+
 
 ;;; image transformations
 
@@ -95,8 +100,12 @@
 
     :default (render-to-output-stream-nocache image output-stream)))
 
-(defn aspect [image]
+(defn dimensions [image]
   (let [buffered-image (with-open [s (image-stream image)]
                          (ImageIO/read s))]
-    (/ (.getWidth buffered-image)
-       (.getHeight buffered-image))))
+    {::width (.getWidth buffered-image)
+     ::height (.getHeight buffered-image)}))
+
+(defn aspect [image]
+  (let [d (dimensions image)]
+    (/ (::width d) (::height d))))

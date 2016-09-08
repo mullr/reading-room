@@ -1,9 +1,14 @@
 * DONE Figure out how to do the string -> int parsing in compojure 
 CLOSED: [2016-06-26 Sun 21:42]
-* TODO Scale comics better on the reading page
-* TODO Scale thumbnails without distorting aspect
+* DONE Scale comics better on the reading page
+CLOSED: [2016-07-09 Sat 18:36]
+* DONE Scale thumbnails without distorting aspect
+CLOSED: [2016-07-09 Sat 18:36]
 * DONE Up link / nav from the reading page
 CLOSED: [2016-06-26 Sun 21:53]
 * TODO Broken links on the series page
 * DONE Caching for thumbnail generation
 CLOSED: [2016-06-26 Sun 22:31]
+* DONE Download link
+CLOSED: [2016-07-09 Sat 20:33]
+* TODO Auto-crop covers

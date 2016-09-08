@@ -22,24 +22,44 @@
 (defn download-volume-url [title volume-num]
   (str "/series/" title "/" volume-num "/download/" title " - " volume-num ".zip"))
 
-(defn page [title content]
-  ;; bootstrap boilerplate
-  [:html {:lang "en"}
-   [:head
-    [:meta {:charset "utf-8"}]
-    [:meta {:http-equiv "X-UA-Compatible" :content "IE=edge"}]
-    [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-    ;; The above 3 meta tags *must* come first in the head; any other head
-    ;; content must come *after* these tags
-    [:title title]
+(defn page
+  ([title content] (page title {} content))
+  ([title html-opts content]
+   ;; bootstrap boilerplate
+   [:html (merge {:lang "en"} html-opts)
+    [:head
+     [:meta {:charset "utf-8"}]
+     [:meta {:http-equiv "X-UA-Compatible" :content "IE=edge"}]
+     [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
+     [:meta {:name "apple-mobile-web-app-capable" :content "yes"}]
 
-    [:link {:href "/assets/bootstrap/css/bootstrap.css" :rel "stylesheet"}]
-    [:link {:href "/assets/bootstrap/css/bootstrap-theme.css" :rel "stylesheet"}]]
-   [:body {:role "document"}
-    [:div.container
-     content]
-    [:script {:src "https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"}]
-    [:script {:src "/assets/bootstrap/js/bootstrap.js"}]]])
+     ;; The above 3 meta tags *must* come first in the head; any other head
+     ;; content must come *after* these tags
+     [:title title]
+
+
+     [:link {:href "/assets/bootstrap/css/bootstrap.css" :rel "stylesheet"}]
+     [:link {:href "/assets/bootstrap/css/bootstrap-theme.css" :rel "stylesheet"}]]
+    [:body {:role "document"}
+     [:div.container
+      content]
+     [:script {:src "https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"}]
+     [:script {:src "/assets/bootstrap/js/bootstrap.js"}]
+     [:script {:type "text/javascript"}
+      "
+if (window.navigator.standalone) {
+    var local = document.domain;
+    $('document').on('click', 'a', function() {
+        var a = $(this).attr('href');
+        if ( a.match('http://' + local) || a.match('http://www.' + local) ){
+            event.preventDefault();
+            document.location.href = a;
+        }
+    });
+}
+"
+      ]
+     ]]))
 
 (defn grid [item-seq layout-item-fn]
   (for [row (partition-all 3 item-seq)]
@@ -87,21 +107,71 @@
                                    "&nbsp;"
                                    [:a {:href (download-volume-url series-title volume-num)} "(Download)"]]}))))]))))
 
+(defn css [style-map]
+  (->> style-map
+       (map (fn [[key val]]
+              (str (name key) ": " (str val))))
+       (clojure.string/join ";")))
+
 (defn show-page [{:keys [library series-title volume-num page-num]}]
-  (page (str series-title " #" volume-num)
-        [:div
-         [:div.row
-          [:a {:href (series-url series-title)} "up"]
-          "&nbsp;"
-          (when (> page-num 1)
-            [:a {:href (page-url series-title volume-num (dec page-num))} "prev"])
-          "&nbsp;"
-          page-num
-          "&nbsp;"
-          (when true
-            [:a {:href (page-url series-title volume-num (inc page-num))} "next"])]
-         [:div.row
-          [:img {:src (page-image-url series-title volume-num page-num)}]]]))
+  (let [image (rr/page-image library series-title volume-num (dec page-num))
+        dim (im/dimensions image)
+        width (::im/width dim)
+        height (::im/height dim)]
+    (page (str series-title " #" volume-num)
+          #_        {:style (css {:background (str " url(" (page-image-url series-title volume-num page-num) ") no-repeat center center fixed;" )
+                                  "-webkit-background-size" "cover"
+                                  "-moz-background-size" "cover"
+                                  "-o-background-size" "cover"
+                                  "background-size" "cover"
+                                  })}
+          #_   [:div {:style (css {:position "fixed"
+                                   :top "-50%"
+                                   :left "-50%"
+                                   :width "200%"
+                                   :height "200%"})}
+                [:img {:src (page-image-url series-title volume-num page-num)
+                       :style (css {:position "absolute"
+                                    :top 0
+                                    :left 0
+                                    :right 0
+                                    :bottom 0
+                                    :margin "auto"
+                                    :width "auto"
+                                    :height "auto"
+                                    :min-width "50%"
+                                    :min-height "50%"})}]]
+          [:div
+           [:map {:name "pagemap"}
+            ;; left half
+            [:area {:shape "rect"
+                    :href (page-url series-title volume-num (inc page-num))
+                    :coords (str "0,0," (float (/ width 2)) "," height)}]
+
+            ;; right half
+            (when (> page-num 1)
+             [:area {:shape "rect"
+                     :href (page-url series-title volume-num (dec page-num))
+                     :coords (str (float (/ width 2)) ",0," width "," height)}])]
+           [:img {:src (page-image-url series-title volume-num page-num)
+                  :usemap "pagemap"
+                  :style (css {:width "auto"
+                               :height "100%"
+                               :min-height "50%"})}]]
+
+          #_        [:div
+                     [:div.row
+                      [:a {:href (series-url series-title)} "up"]
+                      "&nbsp;"
+                      (when (> page-num 1)
+                        [:a {:href (page-url series-title volume-num (dec page-num))} "prev"])
+                      "&nbsp;"
+                      page-num
+                      "&nbsp;"
+                      (when true
+                        [:a {:href (page-url series-title volume-num (inc page-num))} "next"])]
+                     [:div.row
+                      ]])))
 
 
 (defn- likely-cover-image [library series-title volume-num]
