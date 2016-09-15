@@ -23,5 +23,5 @@ extension = ".zip"
 
 <suffix> = volume | misc-tag
 
-volume = <'第'> #"\d+" <'巻'>
+volume = <'第'> #"\d+" <'巻'> | <'第'> #"\d+" <'卷'> | #"\d+"
 misc-tag =  "完全版" | #"全\d+巻" | "(完)" | #"v?\d+-\d+" | #"第\d+巻-第\d+巻" 
