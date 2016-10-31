@@ -1,11 +1,12 @@
 (ns reading-room.web.routes
-  (:require [reading-room.core :as rr]
-            [reading-room.zip :as zip]
-            [reading-room.image :as im]
+  (:require [clojure.java.io :as io]
             [compojure.core :refer [defroutes GET]]
-            [ring.util.response :as response]
+            [reading-room.image :as im]
+            [reading-room.library :as library]
+            [reading-room.zip :as zip]
             [ring.util.io :as ring-io]
-            [clojure.java.io :as io]))
+            [ring.util.response :as response]
+            [reading-room.fs :as fs]))
 
 (defn series-url [title]
   (str "/series/" title))
@@ -77,8 +78,8 @@ if (window.navigator.standalone) {
 (defn show-library [{:keys [library]}]
   (page "library"
         [:div
-         (grid library
-               (fn [{:keys [::rr/author ::rr/title ::rr/volumes]}]
+         (grid (library/query-first-volume-of-each-series library)
+               (fn [{:keys [::library/author ::library/title]}]
                  (thumb-with-caption
                   {:url (cover-url title 1)
                    :href (series-url title)
@@ -86,19 +87,20 @@ if (window.navigator.standalone) {
                              (when author (str "(" author  ")"))]})))]))
 
 (defn show-series [{:keys [library series-title]}]
-  (let [series (rr/series-with-title library series-title)]
+  (let [series (sort-by ::library/volume-num
+                        (library/query-volumes-like library {::library/title series-title}))]
     (if-not series
       [:div "Can't find series with title " series-title]
       (page series-title
             [:div
              [:h1
-              (::rr/title series)
+              (::library/title series)
               "&nbsp;"
               [:a {:href "/"} "up"]]
 
-             (grid (::rr/volumes series)
+             (grid series
                    (fn [v]
-                     (let [volume-num (::rr/volume-num v)]
+                     (let [volume-num (::library/volume-num v)]
                        (thumb-with-caption
                         {:url (cover-url series-title volume-num)
                          :href (page-url series-title volume-num 1)
@@ -114,33 +116,13 @@ if (window.navigator.standalone) {
        (clojure.string/join ";")))
 
 (defn show-page [{:keys [library series-title volume-num page-num]}]
-  (let [image (rr/page-image library series-title volume-num (dec page-num))
-        dim (im/dimensions image)
+  (let [volume (first (library/query-volumes-like library {::library/title series-title
+                                                           ::library/volume-num volume-num}))
+        p (library/volume-page volume (dec page-num))
+        dim (im/dimensions p)
         width (::im/width dim)
         height (::im/height dim)]
     (page (str series-title " #" volume-num)
-          #_        {:style (css {:background (str " url(" (page-image-url series-title volume-num page-num) ") no-repeat center center fixed;" )
-                                  "-webkit-background-size" "cover"
-                                  "-moz-background-size" "cover"
-                                  "-o-background-size" "cover"
-                                  "background-size" "cover"
-                                  })}
-          #_   [:div {:style (css {:position "fixed"
-                                   :top "-50%"
-                                   :left "-50%"
-                                   :width "200%"
-                                   :height "200%"})}
-                [:img {:src (page-image-url series-title volume-num page-num)
-                       :style (css {:position "absolute"
-                                    :top 0
-                                    :left 0
-                                    :right 0
-                                    :bottom 0
-                                    :margin "auto"
-                                    :width "auto"
-                                    :height "auto"
-                                    :min-width "50%"
-                                    :min-height "50%"})}]]
           [:div
            [:map {:name "pagemap"}
             ;; left half
@@ -150,47 +132,34 @@ if (window.navigator.standalone) {
 
             ;; right half
             (when (> page-num 1)
-             [:area {:shape "rect"
-                     :href (page-url series-title volume-num (dec page-num))
-                     :coords (str (float (/ width 2)) ",0," width "," height)}])]
+              [:area {:shape "rect"
+                      :href (page-url series-title volume-num (dec page-num))
+                      :coords (str (float (/ width 2)) ",0," width "," height)}])]
            [:img {:src (page-image-url series-title volume-num page-num)
                   :usemap "pagemap"
                   :style (css {:width "auto"
                                :height "100%"
-                               :min-height "50%"})}]]
-
-          #_        [:div
-                     [:div.row
-                      [:a {:href (series-url series-title)} "up"]
-                      "&nbsp;"
-                      (when (> page-num 1)
-                        [:a {:href (page-url series-title volume-num (dec page-num))} "prev"])
-                      "&nbsp;"
-                      page-num
-                      "&nbsp;"
-                      (when true
-                        [:a {:href (page-url series-title volume-num (inc page-num))} "next"])]
-                     [:div.row
-                      ]])))
-
+                               :min-height "50%"})}]])))
 
 (defn- likely-cover-image [library series-title volume-num]
-  (println "Looking for a cover iamge")
-  (when-let [wide-cover (->> (rr/page-images library series-title volume-num)
-                             (take 10)
-                             (filter #(> (im/aspect %) 1))
-                             (first))]
-    (println "got candidate!" wide-cover)
-    (assoc wide-cover
-           ::im/crop ::im/left-half)))
+  (let [volume (first (library/query-volumes-like library {::library/title series-title
+                                                           ::library/volume-num volume-num}))]
+    (when-let [wide-cover (->> (library/volume-pages volume)
+                               (take 10)
+                               (filter #(> (im/aspect %) 1))
+                               (first))]
+      (assoc wide-cover
+             ::im/crop ::im/left-half))))
 
 (defn cover-image [{:keys [library series-title volume-num]}]
   (response/response
    (ring-io/piped-input-stream
     (fn [output-stream]
       (try
-        (let [cover-image (or ;; (likely-cover-image library series-title volume-num)
-                              (rr/page-image library series-title volume-num 0))]
+        (let [volume (first (library/query-volumes-like library {::library/title series-title
+                                                                 ::library/volume-num volume-num}))
+              cover-image (or ;; (likely-cover-image library series-title volume-num)
+                           (first (library/volume-pages volume)))]
           (-> cover-image
               (assoc ::im/width 200)
               (im/render-to-output-stream output-stream)))
@@ -202,16 +171,16 @@ if (window.navigator.standalone) {
   (response/response
    (ring-io/piped-input-stream
     (fn [output-stream]
-      (-> (rr/page-image library series-title volume-num page-num)
-          (im/render-to-output-stream output-stream))))))
+      (let [volume (first (library/query-volumes-like library {::library/title series-title
+                                                               ::library/volume-num volume-num}))]
+        (-> (library/volume-page volume page-num)
+            (im/render-to-output-stream output-stream)))))))
 
 (defn download-volume [{:keys [library series-title volume-num]}]
   (response/response
-   (io/input-stream
-    (-> library
-        (rr/series-with-title series-title)
-        (rr/volume volume-num)
-        ::rr/path))))
+   (let [volume (first (library/query-volumes-like library {::library/title series-title
+                                                            ::library/volume-num volume-num}))]
+     (fs/content-stream volume))))
 
 (defn maybe-parse-int [s]
   (when s
@@ -219,7 +188,7 @@ if (window.navigator.standalone) {
 
 (defn munge-request-map [req]
   (let [{:keys [series-title volume-num page-num]} (:route-params req)]
-    {:library (::rr/library req)
+    {:library (::library/library req)
      :series-title series-title
      :volume-num (maybe-parse-int volume-num)
      :page-num (maybe-parse-int page-num)}))

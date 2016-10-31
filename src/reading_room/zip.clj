@@ -8,7 +8,7 @@
    "EUC-JP"
    "windows-31j"])
 
-(defn call-with-charset-until-one-works [f]
+(defn- call-with-charset-until-one-works [f]
   (loop [[charset & charsets] charsets-to-try]
     (let [result (try
                    (f charset)
@@ -33,21 +33,15 @@
 (defn- zipfile [path]
   (ZipFile. path (Charset/forName (detect-zip-encoding path))))
 
-(defn ignore-entry? [name]
-  (or
-   (clojure.string/ends-with? name "/")
-   (clojure.string/ends-with? name ".db")
-   (clojure.string/starts-with? name ".")))
-
 (defn zip-entries
   ([path]
    (with-open [zf (zipfile path)]
      (->> (enumeration-seq (.entries zf))
           (map #(.getName %))
-          (filter (comp not ignore-entry?))
-          (sort)))))
+          doall))))
 
 (defn zip-entry-stream [path entry-name]
   (let [zf (zipfile path)
         entry (.getEntry zf entry-name)]
     (.getInputStream zf entry)))
+

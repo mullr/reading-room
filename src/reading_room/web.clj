@@ -1,13 +1,14 @@
 (ns reading-room.web
   (:require [clojure.spec :as s]
-            [reading-room.core :as rr]
+            [reading-room.library :as library]
             [ring.adapter.jetty :as jetty]
             [hiccup.core :as hiccup]
             [ring.util.response :as res]
             [reading-room.web.routes :as routes]
             [prone.middleware :as prone]
             [compojure.response]
-            [ring.middleware.webjars :refer [wrap-webjars]])
+            [ring.middleware.webjars :refer [wrap-webjars]]
+            [reading-room.fs :as fs])
   (:import org.eclipse.jetty.server.Server
            java.net.URLDecoder)
   (:gen-class))
@@ -35,11 +36,10 @@
   (fn [req]
     (handler (assoc req ::config config))))
 
-
 (defn wrap-add-library [handler library-path]
   (fn [req]
     (handler (assoc req
-                    ::rr/library (rr/load-library library-path)))))
+                    ::library/library (library/library (fs/file library-path))))))
 
 (extend-protocol compojure.response/Renderable
   clojure.lang.PersistentVector
