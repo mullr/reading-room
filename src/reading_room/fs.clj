@@ -3,8 +3,7 @@
             [clojure.spec :as s]
             [clojure.string :as string]
             [reading-room.zip :as zip]
-            [clojure.walk :as walk]
-            [reading-room.fs :as fs]))
+            [clojure.walk :as walk]))
 
 ;;; A small VFS layer that knows how to reach inside zip files
 
