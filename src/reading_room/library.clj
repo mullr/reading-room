@@ -48,12 +48,19 @@
        (map volume)
        (sort-by ::volume-num)))
 
+(defn- coerce-to-file [x]
+  (if (string? x)
+    (fs/file x)
+    x))
+
 (s/fdef library
-        :args (s/cat :library-dir ::fs/directory)
+        :args (s/cat :library-dir (s/or :path string?
+                                        :file ::fs/directory))
         :ret (s/coll-of ::volume))
 
 (defn library [library-dir]
-  (->> (fs/children library-dir)
+  (->> (coerce-to-file library-dir)
+       fs/children
        (filter fs/directory?)
        (mapcat series)))
 
