@@ -95,11 +95,6 @@
 
   )
 
-(defn- mapvals [f m]
-  (->> m
-       (map (fn [[k v]] [k (f v)]))
-       (into {})))
-
 (defn query-volumes-like [library example]
   (filter #(= (select-keys % (keys example))
               example)
