@@ -37,9 +37,10 @@
     (handler (assoc req ::config config))))
 
 (defn wrap-add-library [handler library-path]
-  (fn [req]
-    (handler (assoc req
-                    ::library/library (library/library (fs/file library-path))))))
+  (let [lib-memo (memoize library/library)]
+   (fn [req]
+     (handler (assoc req ::library/library
+                     (lib-memo (fs/file library-path)))))))
 
 (extend-protocol compojure.response/Renderable
   clojure.lang.PersistentVector
