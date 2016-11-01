@@ -88,13 +88,6 @@
 (defn volume-page [volume n]
   (nth (volume-pages volume) n))
 
-(comment
-  (let [lib (library (fs/file "/home/mullr/storage/Manga"))
-        vol (nth lib 41)]
-    (pages vol))
-
-  )
-
 (defn query-volumes-like [library example]
   (filter #(= (select-keys % (keys example))
               example)
@@ -116,11 +109,3 @@
       ;; when a value comes into the internal channel, go load the library and recur with it
       )
     out-chan))
-
-;; (defn first-volume-of-series-with-title [library title]
-;;   (->> library
-;;        (filter #(= title (::title %)))
-;;        first))
-
-;; (defn volume [series volume-num]
-;;   (get (::volumes series) (dec volume-num)))
