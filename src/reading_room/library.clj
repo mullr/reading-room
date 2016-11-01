@@ -81,7 +81,7 @@
      (string/starts-with? name ".")
      (not (appears-to-be-image-file? name)))))
 
-(s/fdef pages
+(s/fdef volume-pages
         :args (s/cat :volume ::volume)
         :ret (s/coll-of
               (s/and ::fs/file
