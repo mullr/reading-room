@@ -66,7 +66,7 @@
 
 
 (defn- ignore-file-in-volume? [f]
-  (let [name (::fs/path f)]
+  (let [name (::fs/name f)]
     (or
      (string/ends-with? name "/")
      (string/ends-with? name ".db")
