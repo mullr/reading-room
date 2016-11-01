@@ -64,13 +64,22 @@
        (filter fs/directory?)
        (mapcat series)))
 
+(defn- appears-to-be-image-file? [name]
+  (let [name (.toLowerCase name)]
+   (or
+    (string/ends-with? name "jpg")
+    (string/ends-with? name "jpeg")
+    (string/ends-with? name "gif")
+    (string/ends-with? name "bmp")
+    (string/ends-with? name "png"))))
 
 (defn- ignore-file-in-volume? [f]
   (let [name (::fs/name f)]
     (or
      (string/ends-with? name "/")
      (string/ends-with? name ".db")
-     (string/starts-with? name "."))))
+     (string/starts-with? name ".")
+     (not (appears-to-be-image-file? name)))))
 
 (s/fdef pages
         :args (s/cat :volume ::volume)
