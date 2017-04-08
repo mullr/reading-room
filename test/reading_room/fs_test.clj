@@ -46,11 +46,6 @@
              (-> (first (fs/children f))
                  fs/content-stream
                  slurp)))))
-(-> (fs/file "test_resources/test.zip")
-    fs/children
-    first
-    fs/children
-    first)
 
 (t/deftest test-zip
   (let [f (fs/file "test_resources/test.zip")]
