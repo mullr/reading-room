@@ -116,30 +116,14 @@ if (window.navigator.standalone) {
        (clojure.string/join ";")))
 
 (defn show-page [{:keys [library series-title volume-num page-num]}]
-  (let [volume (first (library/query-volumes-like library {::library/title series-title
-                                                           ::library/volume-num volume-num}))
-        p (library/volume-page volume (dec page-num))
-        dim (im/dimensions p)
-        width (::im/width dim)
-        height (::im/height dim)]
-    (page (str series-title " #" volume-num)
-          [:div
-           [:map {:name "pagemap"}
-            ;; left half
-            [:area {:shape "rect"
-                    :href (page-url series-title volume-num (inc page-num))
-                    :coords (str "0,0," (float (/ width 2)) "," height)}]
-
-            ;; right half
-            (when (> page-num 1)
-              [:area {:shape "rect"
-                      :href (page-url series-title volume-num (dec page-num))
-                      :coords (str (float (/ width 2)) ",0," width "," height)}])]
-           [:img {:src (page-image-url series-title volume-num page-num)
-                  :usemap "pagemap"
-                  :style (css {:width "auto"
-                               :height "100%"
-                               :min-height "50%"})}]])))
+  (page (str series-title " #" volume-num)
+        [:div
+         [:a {:href (page-url series-title volume-num (inc page-num))}
+          [:img {:src (page-image-url series-title volume-num page-num)
+                 :usemap "pagemap"
+                 :style (css {:width "auto"
+                              :height "100%"
+                              :min-height "50%"})}]]]))
 
 (defn- likely-cover-image [library series-title volume-num]
   (let [volume (first (library/query-volumes-like library {::library/title series-title
