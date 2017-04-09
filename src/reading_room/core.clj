@@ -1,5 +1,4 @@
 (ns reading-room.core
-  (:gen-class)
   (:require [com.stuartsierra.component :as component]
             [io.pedestal.http :as http]
             [reading-room.image :as image]
