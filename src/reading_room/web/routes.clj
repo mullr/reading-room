@@ -12,19 +12,15 @@
             [io.pedestal.http :as http]
             [hiccup.core :as hiccup]
             [io.pedestal.interceptor :as interceptor]
-            [ring.util.codec :as codec]))
+            [ring.util.codec :as codec]
+            [io.pedestal.http.route :as route]))
 
-(defn series-url [title]
-  (str "/series/" title))
-
-(defn cover-url [title volume-num]
-  (str "/series/" title "/" volume-num "/cover.jpg"))
-
-(defn page-url [title volume-num page-num]
-  (str "/series/" title "/" volume-num "/page/" page-num))
-
-(defn page-image-url [title volume-num page-num]
-  (str (page-url title volume-num page-num) "/full.jpg"))
+(defn url-for
+  "Slightly terser wrapper for route/url-for"
+  [route-name & opts]
+  (if (map? (first opts))
+    (apply route/url-for route-name :path-params opts)
+    (apply route/url-for route-name opts)))
 
 (defn download-volume-url [title volume-num]
   (str "/series/" title "/" volume-num "/download/" title " - " volume-num ".zip"))
@@ -89,8 +85,8 @@ if (window.navigator.standalone) {
          (grid (library/query-first-volume-of-each-series library)
                (fn [{:keys [::library/author ::library/title]}]
                  (thumb-with-caption
-                  {:url (cover-url title 1)
-                   :href (series-url title)
+                  {:url (url-for :cover-image {:series-title title :volume-num 1})
+                   :href (url-for :series {:series-title title})
                    :caption [:p title "&nbsp;"
                              (when author (str "(" author  ")"))]})))]))
 
@@ -108,14 +104,18 @@ if (window.navigator.standalone) {
 
              (grid series
                    (fn [v]
-                     (let [volume-num (::library/volume-num v)]
+                     (let [volume-num (::library/volume-num v)
+                           volume-path-params {:series-title series-title
+                                               :volume-num volume-num
+                                               :file-name (str series-title ".zip")
+                                               :page-num 1}]
                        (thumb-with-caption
-                        {:url (cover-url series-title volume-num)
-                         :href (page-url series-title volume-num 1)
+                        {:url (url-for :cover-image volume-path-params)
+                         :href (url-for :page volume-path-params)
                          :caption [:p
                                    "Volume " volume-num
                                    "&nbsp;"
-                                   [:a {:href (download-volume-url series-title volume-num)} "(Download)"]]}))))]))))
+                                   [:a {:href (url-for :download-volume volume-path-params)} "(Download)"]]}))))]))))
 
 (defn css [style-map]
   (->> style-map
@@ -124,14 +124,18 @@ if (window.navigator.standalone) {
        (clojure.string/join ";")))
 
 (defn show-page [library {{:keys [series-title volume-num page-num]} :path-params}]
-  (page (str series-title " #" volume-num)
-        [:div
-         [:a {:href (page-url series-title volume-num (inc page-num))}
-          [:img {:src (page-image-url series-title volume-num page-num)
-                 :usemap "pagemap"
-                 :style (css {:width "auto"
-                              :height "100%"
-                              :min-height "50%"})}]]]))
+  (let [this-page-path-params {:series-title series-title
+                               :volume-num volume-num
+                               :page-num page-num}
+        next-page-path-params (update this-page-path-params :page-num inc)]
+    (page (str series-title " #" volume-num)
+          [:div
+           [:a {:href (url-for :page next-page-path-params)}
+            [:img {:src (url-for :page-image this-page-path-params)
+                   :usemap "pagemap"
+                   :style (css {:width "auto"
+                                :height "100%"
+                                :min-height "50%"})}]]])))
 
 (defn- likely-cover-image [library series-title volume-num]
   (let [volume (first (library/query-volumes-like library {::library/title series-title
@@ -180,14 +184,6 @@ if (window.navigator.standalone) {
 (defn parse-int [x]
   (Integer/parseInt x))
 
-(defn munge-request-map [req]
-  (let [{:keys [series-title volume-num page-num]} (:route-params req)]
-    {:library (::library/library req)
-     :image-cache (::image/cache req)
-     :series-title series-title
-     :volume-num (maybe-parse-int volume-num)
-     :page-num (maybe-parse-int page-num)}))
-
 (def parse-path-params
   (interceptor/interceptor
    {:name :parse-path-params
@@ -228,6 +224,6 @@ if (window.navigator.standalone) {
 
     ["/series/:series-title/:volume-num/page/:page-num/full.jpg"
      :get (conj common-interceptors (partial page-image library image-cache))
-     :route-name :full-page-image]])) 
+     :route-name :page-image]]))
 
 
