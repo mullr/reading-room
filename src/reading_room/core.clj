@@ -1,16 +1,10 @@
 (ns reading-room.core
   (:gen-class)
-  (:require [clojure.spec :as s]
-            compojure.response
-            [environ.core :refer [env]]
-            [prone.middleware :as prone]
-            [reading-room.fs :as fs]
-            [reading-room.library :as library]
-            [reading-room.web :as web]
-            [com.stuartsierra.component :as component]
-            [reading-room.image :as image]
+  (:require [com.stuartsierra.component :as component]
             [io.pedestal.http :as http]
-            [io.pedestal.interceptor :as interceptor]))
+            [reading-room.image :as image]
+            [reading-room.library :as library]
+            [reading-room.web :as web]))
 
 (defrecord PedestalRRServer [port library image-cache]
   component/Lifecycle

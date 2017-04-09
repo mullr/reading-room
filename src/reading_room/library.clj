@@ -1,11 +1,10 @@
 (ns reading-room.library
   (:require [clojure.java.io :as io]
             [clojure.spec :as s]
-            [clojure.spec.test :as stest]
             [clojure.string :as string]
+            [com.stuartsierra.component :as component]
             [instaparse.core :as insta]
-            [reading-room.fs :as fs]
-            [com.stuartsierra.component :as component]))
+            [reading-room.fs :as fs]))
 
 (s/def ::title string?)
 (s/def ::kind string?)

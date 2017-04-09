@@ -1,19 +1,14 @@
 (ns reading-room.web
-  (:require [clojure.java.io :as io]
+  (:require [hiccup.core :as hiccup]
+            [io.pedestal.http :as http]
+            [io.pedestal.http.route :as route]
+            [io.pedestal.http.route.definition.table :as table]
+            [io.pedestal.interceptor :as interceptor]
+            [reading-room.fs :as fs]
             [reading-room.image :as im]
             [reading-room.library :as library]
-            [reading-room.zip :as zip]
-            [ring.util.io :as ring-io]
-            [ring.util.response :as response]
-            [reading-room.fs :as fs]
-            [reading-room.image :as image]
-            [io.pedestal.http.route.definition :refer [defroutes]]
-            [io.pedestal.http.route.definition.table :as table]
-            [io.pedestal.http :as http]
-            [hiccup.core :as hiccup]
-            [io.pedestal.interceptor :as interceptor]
             [ring.util.codec :as codec]
-            [io.pedestal.http.route :as route]))
+            [ring.util.response :as response]))
 
 (defn url-for
   "Slightly terser wrapper for route/url-for"
@@ -188,8 +183,6 @@ if (window.navigator.standalone) {
   (interceptor/interceptor
    {:name :parse-path-params
     :enter (fn [req]
-             (println "path params")
-             (prn (-> req :request :path-params))
              (update-in req [:request :path-params]
                         #(-> %
                              (update :volume-num (when-not-nil parse-int))
