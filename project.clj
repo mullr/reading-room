@@ -23,4 +23,4 @@
                    :source-paths ["dev"]
                    :env {:port 4000}}}
 
-  :main reading-room.web)
+  :main reading-room.core)

@@ -1,4 +1,4 @@
-(ns reading-room.web
+(ns reading-room.core
   (:gen-class)
   (:require [clojure.spec :as s]
             compojure.response
