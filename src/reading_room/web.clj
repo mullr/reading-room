@@ -3,12 +3,12 @@
             [io.pedestal.http :as http]
             [io.pedestal.http.route :as route]
             [io.pedestal.http.route.definition.table :as table]
-            [io.pedestal.interceptor :as interceptor]
             [reading-room.fs :as fs]
             [reading-room.image :as im]
             [reading-room.library :as library]
             [ring.util.codec :as codec]
-            [ring.util.response :as response]))
+            [ring.util.response :as response]
+            [ring.middleware.webjars :refer [wrap-webjars]]))
 
 (defn url-for
   "Slightly terser wrapper for route/url-for"
@@ -192,12 +192,20 @@ if (window.navigator.standalone) {
 
 (def common-interceptors
   [http/html-body parse-path-params])
+(defn webjar-handler [path]
+  (wrap-webjars
+   (fn [req] (response/not-found "asset not found"))
+   path))
 
 (defn make-routes [library image-cache]
   (table/table-routes
    [["/"
      :get (conj common-interceptors (partial show-library library))
      :route-name :root]
+
+    ["/assets/*"
+     :get (webjar-handler "/assets")
+     :route-name :webjars]
 
     ["/series/:series-title"
      :get (conj common-interceptors (partial show-series library))
