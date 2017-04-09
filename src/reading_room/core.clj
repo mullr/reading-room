@@ -6,7 +6,7 @@
             [prone.middleware :as prone]
             [reading-room.fs :as fs]
             [reading-room.library :as library]
-            [reading-room.web.routes :as routes]
+            [reading-room.web :as web]
             [com.stuartsierra.component :as component]
             [reading-room.image :as image]
             [io.pedestal.http :as http]
@@ -18,7 +18,7 @@
     (let [s (-> #::http {:port port
                          :type :jetty
                          :join? false ; do not block thread that starts web server
-                         :routes (fn [] (routes/make-routes library image-cache))}
+                         :routes (fn [] (web/make-routes library image-cache))}
                 ;; Wire up interceptor chains
                 http/default-interceptors
                 http/dev-interceptors

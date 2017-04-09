@@ -1,4 +1,4 @@
-(ns reading-room.web.routes
+(ns reading-room.web
   (:require [clojure.java.io :as io]
             [reading-room.image :as im]
             [reading-room.library :as library]
