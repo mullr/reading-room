@@ -23,4 +23,5 @@
                    :source-paths ["dev"]
                    :env {:port 4000}}}
 
-  :main reading-room.core)
+  :main reading-room.core
+  :repl-options {:init-ns dev})
