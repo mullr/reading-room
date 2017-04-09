@@ -16,8 +16,7 @@
   []
   (alter-var-root #'system
                   (fn [_]
-                    (sys/make-system {:port 4000
-                                      :library-path "/home/mullr/storage/Manga"}))))
+                    (sys/make-system "config/dev/reading-room.edn"))))
 
 (defn start
   "Starts the system running, updates the Var #'system."
