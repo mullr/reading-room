@@ -179,16 +179,13 @@ if (window.navigator.standalone) {
 (defn parse-int [x]
   (Integer/parseInt x))
 
-(def parse-path-params
-  (interceptor/interceptor
-   {:name :parse-path-params
-    :enter (fn [req]
-             (update-in req [:request :path-params]
-                        #(-> %
-                             (update :volume-num (when-not-nil parse-int))
-                             (update :page-num (when-not-nil parse-int))
-                             (update :series-title (when-not-nil codec/url-decode))
-                             (update :file-name (when-not-nil codec/url-decode)))))}))
+(interceptor/defbefore parse-path-params [req]
+  (update-in req [:request :path-params]
+             #(-> %
+                  (update :volume-num (when-not-nil parse-int))
+                  (update :page-num (when-not-nil parse-int))
+                  (update :series-title (when-not-nil codec/url-decode))
+                  (update :file-name (when-not-nil codec/url-decode)))))
 
 (def common-interceptors
   [http/html-body parse-path-params])
