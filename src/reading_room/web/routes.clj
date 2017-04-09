@@ -6,7 +6,8 @@
             [reading-room.zip :as zip]
             [ring.util.io :as ring-io]
             [ring.util.response :as response]
-            [reading-room.fs :as fs]))
+            [reading-room.fs :as fs]
+            [reading-room.image :as image]))
 
 (defn series-url [title]
   (str "/series/" title))
@@ -135,7 +136,7 @@ if (window.navigator.standalone) {
       (assoc wide-cover
              ::im/crop ::im/left-half))))
 
-(defn cover-image [{:keys [library series-title volume-num]}]
+(defn cover-image [{:keys [library image-cache series-title volume-num]}]
   (response/response
    (ring-io/piped-input-stream
     (fn [output-stream]
@@ -146,19 +147,19 @@ if (window.navigator.standalone) {
                            (first (library/volume-pages volume)))]
           (-> cover-image
               (assoc ::im/width 200)
-              (im/render-to-output-stream output-stream)))
+              (im/render-to-output-stream image-cache output-stream)))
         (catch Exception e
           (println e)
           (throw e)))))))
 
-(defn page-image [{:keys [library series-title volume-num page-num]}]
+(defn page-image [{:keys [library image-cache series-title volume-num page-num]}]
   (response/response
    (ring-io/piped-input-stream
     (fn [output-stream]
       (let [volume (first (library/query-volumes-like library {::library/title series-title
                                                                ::library/volume-num volume-num}))]
         (-> (library/volume-page volume page-num)
-            (im/render-to-output-stream output-stream)))))))
+            (im/render-to-output-stream image-cache output-stream)))))))
 
 (defn download-volume [{:keys [library series-title volume-num]}]
   (response/response
@@ -173,6 +174,7 @@ if (window.navigator.standalone) {
 (defn munge-request-map [req]
   (let [{:keys [series-title volume-num page-num]} (:route-params req)]
     {:library (::library/library req)
+     :image-cache (::image/cache req)
      :series-title series-title
      :volume-num (maybe-parse-int volume-num)
      :page-num (maybe-parse-int page-num)}))

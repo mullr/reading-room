@@ -11,7 +11,8 @@
    [clojure.string :as str]
    [clojure.test :as test]
    [clojure.tools.namespace.repl :refer [refresh refresh-all]]
-   [reading-room.web :as sys]))
+   [reading-room.web :as sys]
+   [com.stuartsierra.component :as component]))
 
 
 (def system
@@ -24,19 +25,21 @@
   #'system."
   []
   (alter-var-root #'system
-                  (constantly sys/system)))
+                  (fn [_]
+                    (sys/make-system {:port 4000
+                                      :library-path "/home/mullr/storage/Manga"}))))
 
 (defn start
   "Starts the system running, updates the Var #'system."
   []
-  (alter-var-root #'system sys/start))
+  (alter-var-root #'system component/start))
 
 (defn stop
   "Stops the system if it is currently running, updates the Var
   #'system."
   []
   (alter-var-root #'system
-                  (fn [s] (when s (sys/stop s)))))
+                  (fn [s] (when s (component/stop s)))))
 
 (defn go
   "Initializes and starts the system running."

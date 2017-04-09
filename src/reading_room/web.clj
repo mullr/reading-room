@@ -1,17 +1,20 @@
 (ns reading-room.web
+  (:gen-class)
   (:require [clojure.spec :as s]
-            [reading-room.library :as library]
-            [ring.adapter.jetty :as jetty]
+            compojure.response
+            [environ.core :refer [env]]
             [hiccup.core :as hiccup]
-            [ring.util.response :as res]
-            [reading-room.web.routes :as routes]
             [prone.middleware :as prone]
-            [compojure.response]
+            [reading-room.fs :as fs]
+            [reading-room.library :as library]
+            [reading-room.web.routes :as routes]
+            [ring.adapter.jetty :as jetty]
             [ring.middleware.webjars :refer [wrap-webjars]]
-            [reading-room.fs :as fs])
-  (:import org.eclipse.jetty.server.Server
-           java.net.URLDecoder)
-  (:gen-class))
+            [ring.util.response :as res]
+            [com.stuartsierra.component :as component]
+            [reading-room.image :as image])
+  (:import java.net.URLDecoder
+           org.eclipse.jetty.server.Server))
 
 (s/def :jetty/port integer?)
 (s/def :jetty/join? boolean?)
@@ -31,16 +34,9 @@
 (s/def ::config (s/keys :req [::jetty-config
                               ::library-path]))
 
-
-(defn wrap-add-config [handler config]
+(defn wrap-merge-map [handler m]
   (fn [req]
-    (handler (assoc req ::config config))))
-
-(defn wrap-add-library [handler library-path]
-  (let [lib-memo (memoize library/library)]
-   (fn [req]
-     (handler (assoc req ::library/library
-                     (lib-memo (fs/file library-path)))))))
+    (handler (merge req m req))))
 
 (extend-protocol compojure.response/Renderable
   clojure.lang.PersistentVector
@@ -54,30 +50,49 @@
   (fn [req]
     (handler (update req :uri #(URLDecoder/decode %)))))
 
-(defn make-app [config]
+(defn make-app [library image-cache]
   (-> (fn [req]
         (routes/app req))
-      (wrap-add-library (::library-path config))
-      (wrap-add-config config)
+      (wrap-merge-map {::library/library library
+                       ::image/cache image-cache})
       wrap-request-uri-decode
       wrap-webjars
       prone/wrap-exceptions))
 
-(def system
-  {::config {::jetty-config {:port 4000
-                             :join? false}
-             ::library-path "/home/mullr/storage/Manga"}})
+(defrecord RRServer [port library image-cache]
+  component/Lifecycle
+  (start [this]
+    (let [handler (make-app library image-cache)
+          server (jetty/run-jetty handler
+                                  {:port port
+                                   :join? false})]
+      (assoc this
+             :handler handler
+             :server server)))
 
-(defn start [{:keys [::config] :as s}]
-  (let [handler (make-app config)]
-    (assoc s
-           :ring/handler handler
-           ::server (jetty/run-jetty handler
-                                     (::jetty-config config)))))
+  (stop [this]
+    (.stop (:server this))
+    (dissoc this :server)))
 
-(defn stop [s]
-  (.stop (::server s))
-  (dissoc s ::server))
+(defn make-system [{:keys [port library-path]}]
+  (component/system-map
+   :library (library/->Library library-path)
+   :image-cache (image/->Cache)
+   :app (component/using (map->RRServer {:port port})
+                         [:library :image-cache])))
 
-(defn -main [& args]
-  (start system))
+(comment
+  (def cs (atom (make-system {:port 4000
+                              :library-path "/home/mullr/storage/Manga"})))
+
+  (swap! cs component/start)
+
+  (swap! cs component/stop)
+
+  (keys @cs)
+  (:app @cs)
+  (:library @cs)
+)
+
+(defn -main [& [port library-path]]
+  (component/start (c-system {:port port :library-path library-path})))

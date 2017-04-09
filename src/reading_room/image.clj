@@ -3,7 +3,8 @@
             [clojure.java.io :as io]
             [clojure.spec :as s]
             [mikera.image.core :as imagez]
-            [reading-room.fs :as fs])
+            [reading-room.fs :as fs]
+            [com.stuartsierra.component :as component])
   (:import (java.awt.image BufferedImage)
            (javax.imageio ImageIO)
            (org.imgscalr Scalr)
@@ -53,9 +54,6 @@
     (.flush byte-stream)
     (.toByteArray byte-stream)))
 
-(def ^:dynamic *render-cache*
-  (atom (cache/lru-cache-factory {} :threshold 1024)))
-
 (defn- cachable? [image]
   (or (contains? image ::width)
       (contains? image ::crop)))
@@ -64,19 +62,20 @@
   (and (not (contains? image ::width))
        (not (contains? image ::crop))))
 
-(defn render-to-output-stream [image output-stream]
+(defn render-to-output-stream [image cache output-stream]
   (cond
     (directly-streamable? image) (with-open [s (fs/content-stream image)]
                                    (io/copy s output-stream)
                                    (.flush output-stream))
 
-    (cachable? image) (if-let [image-bytes (cache/lookup @*render-cache* image)]
-                        (do
-                          (swap! *render-cache* cache/hit image)
-                          (io/copy (ByteArrayInputStream. image-bytes) output-stream))
-                        (let [image-bytes (render-to-byte-array-nocache image)]
-                          (swap! *render-cache* cache/miss image image-bytes)
-                          (io/copy (ByteArrayInputStream. image-bytes) output-stream)))
+    (cachable? image) (let [{:keys [cache-atom]} cache]
+                        (if-let [image-bytes (cache/lookup @cache-atom image)]
+                          (do
+                            (swap! cache-atom cache/hit image)
+                            (io/copy (ByteArrayInputStream. image-bytes) output-stream))
+                          (let [image-bytes (render-to-byte-array-nocache image)]
+                            (swap! cache-atom cache/miss image image-bytes)
+                            (io/copy (ByteArrayInputStream. image-bytes) output-stream))))
 
     :default (render-to-output-stream-nocache image output-stream)))
 
@@ -89,3 +88,12 @@
 (defn aspect [image]
   (let [d (dimensions image)]
     (/ (::width d) (::height d))))
+
+(defrecord Cache []
+  component/Lifecycle
+  (start [this]
+    (assoc this :cache-atom
+           (atom (cache/lru-cache-factory {} :threshold 1024))))
+  (stop [this]
+    (dissoc this :cache-atom)))
+

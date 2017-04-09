@@ -4,7 +4,8 @@
             [clojure.spec.test :as stest]
             [clojure.string :as string]
             [instaparse.core :as insta]
-            [reading-room.fs :as fs]))
+            [reading-room.fs :as fs]
+            [com.stuartsierra.component :as component]))
 
 (s/def ::title string?)
 (s/def ::kind string?)
@@ -53,16 +54,23 @@
     (fs/file x)
     x))
 
-(s/fdef library
+(s/fdef load-volumes
         :args (s/cat :library-dir (s/or :path string?
                                         :file ::fs/directory))
         :ret (s/coll-of ::volume))
 
-(defn library [library-dir]
+(defn load-volumes [library-dir]
   (->> (coerce-to-file library-dir)
        fs/children
        (filter fs/directory?)
        (mapcat series)))
+
+(defrecord Library [path]
+  component/Lifecycle
+  (start [this]
+    (assoc this :volumes (load-volumes path)))
+  (stop [this]
+    (dissoc this :volumes)))
 
 (defn- appears-to-be-image-file? [name]
   (let [name (.toLowerCase name)]
@@ -100,10 +108,10 @@
 (defn query-volumes-like [library example]
   (filter #(= (select-keys % (keys example))
               example)
-          library))
+          (:volumes library)))
 
 (defn query-first-volume-of-each-series [library]
-  (->> library
+  (->> (:volumes library)
        (group-by ::title)
        (map (fn [[_ vols-for-title]]
               (first (sort-by ::volume-num vols-for-title))))))
