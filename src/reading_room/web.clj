@@ -185,8 +185,8 @@ if (window.navigator.standalone) {
                   (update :series-title (when-not-nil codec/url-decode))
                   (update :file-name (when-not-nil codec/url-decode)))))
 
-(def common-interceptors
-  [http/html-body parse-path-params])
+(def common-interceptors [http/html-body parse-path-params])
+
 (defn webjar-handler [path]
   (wrap-webjars
    (fn [req] (response/not-found "asset not found"))
@@ -221,5 +221,3 @@ if (window.navigator.standalone) {
     ["/series/:series-title/:volume-num/page/:page-num/full.jpg"
      :get (conj common-interceptors (partial page-image library image-cache))
      :route-name :page-image]]))
-
-
