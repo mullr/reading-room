@@ -18,9 +18,6 @@
     (apply route/url-for route-name :path-params opts)
     (apply route/url-for route-name opts)))
 
-(defn download-volume-url [title volume-num]
-  (str "/series/" title "/" volume-num "/download/" title " - " volume-num ".zip"))
-
 (defn page
   ([title content] (page title {} content))
   ([title html-opts content]
