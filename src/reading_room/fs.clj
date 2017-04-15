@@ -3,7 +3,9 @@
             [clojure.spec :as s]
             [clojure.string :as string]
             [reading-room.zip :as zip]
-            [clojure.walk :as walk]))
+            [clojure.walk :as walk])
+  (:import [java.nio.channels FileChannel]
+           [java.nio.file Paths OpenOption]))
 
 ;;; A small VFS layer that knows how to reach inside zip files
 
@@ -114,7 +116,12 @@
                  :zipped-directory ::path-in-zip)]
     (key-fn f)))
 
+(defn- file-channel [path-str]
+  (-> path-str
+      (Paths/get (make-array String 0))
+      (FileChannel/open (make-array OpenOption 0))))
+
 (defn content-stream [f]
   (case (::type f)
-    :file (io/input-stream (::path f))
+    :file (file-channel (::path f))
     :zipped-file (zip/zip-entry-stream (::path f) (::path-in-zip f))))
