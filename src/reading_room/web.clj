@@ -8,7 +8,8 @@
             [reading-room.library :as library]
             [ring.util.codec :as codec]
             [ring.util.response :as response]
-            [ring.middleware.webjars :refer [wrap-webjars]]))
+            [ring.middleware.webjars :refer [wrap-webjars]]
+            [io.pedestal.interceptor.helpers :as interceptor]))
 
 (defn url-for
   "Slightly terser wrapper for route/url-for"
